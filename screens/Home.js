@@ -1,11 +1,10 @@
 import React, { Component } from 'react'
-import { Text, StyleSheet, View, TouchableOpacity, Image, Dimensions, Modal, Linking, Alert } from 'react-native'
+import { Text, StyleSheet, View, TouchableOpacity, Image, Modal, Linking, Alert } from 'react-native'
 import { MaterialCommunityIcons, Entypo, AntDesign } from '@expo/vector-icons'
 import Cam from './Cam'
 import * as MediaLibrary from 'expo-media-library'
-
-const windowWidth = Dimensions.get('window').width
-const windowHeight = Dimensions.get('window').height
+import * as ImagePicker from 'expo-image-picker'
+import * as ImageManipulator from 'expo-image-manipulator'
 
 export default class Home extends Component {
     constructor(){
@@ -38,12 +37,70 @@ export default class Home extends Component {
     savePhoto = () => {
         MediaLibrary.createAssetAsync(this.state.image)
         .then(res=>{
-            let encodedURL = encodeURIComponent(res.uri);
-            let instagramURL = "instagram://library?AssetPath="+encodedURL
-            Linking.openURL(instagramURL)
+            ImageManipulator.manipulateAsync(res.uri, [{
+                resize:{
+                    width:500,
+                    height:500
+                }
+            }])
+            .then(res=>{
+                console.log(res);
+                let encodedURL = encodeURIComponent(res.uri);
+                let instagramURL = "instagram://library?AssetPath="+encodedURL
+                Linking.openURL(instagramURL)
+            })
+            .catch(e=>console.log(e))
         })
         .catch(e=>console.log(e))
     }
+
+    pickImage = () => {
+        ImagePicker.requestCameraRollPermissionsAsync()
+        .then(res=>{
+            if(res.status!=="granted"){
+                Alert.alert(
+                    "Permission Reqiured", 
+                    "Kindly allow permission in settings to continue",
+                    [
+                        {
+                            text: "Cancel",
+                            onPress: () => console.log("Cancel Pressed"),
+                            style: "cancel"
+                        },
+                        {
+                            text: "Open Settings", 
+                            onPress: () => Linking.openSettings()
+                            .then(()=>{
+                                this.setState({
+                                    image:null
+                                })
+                            })
+                            .catch(e=>console.log(e))
+                        }
+                    ],
+                    {cancelable: false}
+                )
+                return
+            }
+            ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.All,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 1,
+            })        
+            .then(result=>{
+                if (!result.cancelled) {
+                    this.setState({
+                        image:result.uri
+                    })
+                }
+            })
+            .catch(e=>console.log(e))
+        })
+        .catch(e=>console.log(e))
+    }
+
+    
 
     shareToIg = ()=> {
         MediaLibrary.getPermissionsAsync()
@@ -86,7 +143,7 @@ export default class Home extends Component {
                     {
                         this.state.image!==null ?
                         <Image style={styles.image} source={{uri:this.state.image}} /> :
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={this.pickImage}>
                             <MaterialCommunityIcons name="image-plus" size={60} color="#4630EB" />
                         </TouchableOpacity>
                     }
@@ -152,7 +209,8 @@ const styles = StyleSheet.create({
         alignItems:"center",
         height:500,
         backgroundColor:"#eee",
-        marginTop:30
+        marginTop:30,
+        resizeMode:"contain"
     },
 
     image:{

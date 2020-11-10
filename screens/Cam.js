@@ -6,11 +6,13 @@ import { FontAwesome, Ionicons, FontAwesome5 } from '@expo/vector-icons'
 export default function App(props) {
   const [hasPermission, setHasPermission] = useState(null);
   const [type, setType] = useState(Camera.Constants.Type.back);
+  const [size, setSize] = useState(null);
 
   useEffect(() => {
     (async () => {
       const { status } = await Camera.requestPermissionsAsync()
       setHasPermission(status === 'granted')
+      setSize(size)
     })()
   }, [])
   takePhoto=()=>{
@@ -26,9 +28,11 @@ export default function App(props) {
   if (hasPermission === false) {
     return <Text>No access to camera</Text>;
   }
+  console.log(size)
   return (
     <View style={{ flex: 1 }}>
       <Camera 
+        pictureSize="1:1"
         ref={ref => {
           this.camera = ref;
         }}
